@@ -89,8 +89,8 @@ def digit_mean(X, y, digit):
     '''
     
     means = []
-    for i in range(15):
-        for j in range(15):
+    for i in range(16):
+        for j in range(16):
             currentPixel = (i, j)
             means.append(digit_mean_at_pixel(X, y, digit, currentPixel))            
 
@@ -109,8 +109,8 @@ def digit_variance(X, y, digit):
     '''
     
     variances = []
-    for i in range(15):
-        for j in range(15):
+    for i in range(16):
+        for j in range(16):
             currentPixel = (i, j)    
             variances.append(digit_variance_at_pixel(X, y, digit, currentPixel))
 
