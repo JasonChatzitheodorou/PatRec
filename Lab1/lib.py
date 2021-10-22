@@ -1,5 +1,8 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
-
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+import statistics
 
 def show_sample(X, index):
     '''Takes a dataset (e.g. X_train) and imshows the digit at the corresponding index
@@ -8,7 +11,9 @@ def show_sample(X, index):
         X (np.ndarray): Digits data (nsamples x nfeatures)
         index (int): index of digit to show
     '''
-    raise NotImplementedError
+    image = X[index].reshape((16, 16))
+    plt.imshow(image)
+    plt.axis('off')
 
 
 def plot_digits_samples(X, y):
@@ -18,9 +23,22 @@ def plot_digits_samples(X, y):
         X (np.ndarray): Digits data (nsamples x nfeatures)
         y (np.ndarray): Labels for dataset (nsamples)
     '''
-    raise NotImplementedError
+    fig = plt.figure()
+    rows = 2
+    columns = 5
 
+    chosenSamples = []
+    for i in range(0, 10):
+        samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == i]
+        chosenSamples.append(random.choice(samplesOfClass))
 
+    i = 1
+    for s in chosenSamples:
+        fig.add_subplot(rows, columns, i)
+        show_sample(X, s)
+        i += 1
+
+    
 def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
     '''Calculates the mean for all instances of a specific digit at a pixel location
 
@@ -33,7 +51,10 @@ def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
     Returns:
         (float): The mean value of the digits for the specified pixels
     '''
-    raise NotImplementedError
+    
+    samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
+    pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
+    return statistics.fmean(pixelOfSamples)
 
 
 
@@ -49,7 +70,9 @@ def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
     Returns:
         (float): The variance value of the digits for the specified pixels
     '''
-    raise NotImplementedError
+    samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
+    pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
+    return statistics.variance(pixelOfSamples)
 
 
 
@@ -64,9 +87,14 @@ def digit_mean(X, y, digit):
     Returns:
         (np.ndarray): The mean value of the digits for every pixel
     '''
-    raise NotImplementedError
+    
+    means = []
+    for i in range(15):
+        for j in range(15):
+            currentPixel = (i, j)
+            means.append(digit_mean_at_pixel(X, y, digit, currentPixel))            
 
-
+    return np.array(means)
 
 def digit_variance(X, y, digit):
     '''Calculates the variance for all instances of a specific digit
@@ -79,7 +107,14 @@ def digit_variance(X, y, digit):
     Returns:
         (np.ndarray): The variance value of the digits for every pixel
     '''
-    raise NotImplementedError
+    
+    variances = []
+    for i in range(15):
+        for j in range(15):
+            currentPixel = (i, j)    
+            variances.append(digit_variance_at_pixel(X, y, digit, currentPixel))
+
+    return np.array(variances)
 
 
 def euclidean_distance(s, m):
