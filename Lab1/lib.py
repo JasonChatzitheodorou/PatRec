@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import statistics
 
+
 def show_sample(X, index):
     '''Takes a dataset (e.g. X_train) and imshows the digit at the corresponding index
 
@@ -38,7 +39,7 @@ def plot_digits_samples(X, y):
         show_sample(X, s)
         i += 1
 
-    
+
 def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
     '''Calculates the mean for all instances of a specific digit at a pixel location
 
@@ -51,11 +52,11 @@ def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
     Returns:
         (float): The mean value of the digits for the specified pixels
     '''
-    
-    samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
-    pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
-    return statistics.fmean(pixelOfSamples)
 
+    samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
+    pixelOfSamples = [X[sample].reshape(
+        (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
+    return statistics.fmean(pixelOfSamples)
 
 
 def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
@@ -71,9 +72,9 @@ def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
         (float): The variance value of the digits for the specified pixels
     '''
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
-    pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
+    pixelOfSamples = [X[sample].reshape(
+        (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
     return statistics.variance(pixelOfSamples)
-
 
 
 def digit_mean(X, y, digit):
@@ -87,14 +88,15 @@ def digit_mean(X, y, digit):
     Returns:
         (np.ndarray): The mean value of the digits for every pixel
     '''
-    
+
     means = []
     for i in range(16):
         for j in range(16):
             currentPixel = (i, j)
-            means.append(digit_mean_at_pixel(X, y, digit, currentPixel))            
+            means.append(digit_mean_at_pixel(X, y, digit, currentPixel))
 
     return np.array(means)
+
 
 def digit_variance(X, y, digit):
     '''Calculates the variance for all instances of a specific digit
@@ -107,12 +109,13 @@ def digit_variance(X, y, digit):
     Returns:
         (np.ndarray): The variance value of the digits for every pixel
     '''
-    
+
     variances = []
     for i in range(16):
         for j in range(16):
-            currentPixel = (i, j)    
-            variances.append(digit_variance_at_pixel(X, y, digit, currentPixel))
+            currentPixel = (i, j)
+            variances.append(digit_variance_at_pixel(
+                X, y, digit, currentPixel))
 
     return np.array(variances)
 
@@ -127,7 +130,7 @@ def euclidean_distance(s, m):
     Returns:
         (float) The Euclidean distance between s and m
     '''
-    raise NotImplementedError
+    return np.linalg.norm(s - m)
 
 
 def euclidean_distance_classifier(X, X_mean):
@@ -140,8 +143,12 @@ def euclidean_distance_classifier(X, X_mean):
     Returns:
         (np.ndarray) predictions (nsamples)
     '''
-    raise NotImplementedError
-
+    predictions = []
+    for x in X:
+        distances = [euclidean_distance(x, m) for m in X_mean]
+        predictions.append(np.argmin(distances))
+    
+    return np.array(predictions)
 
 
 class EuclideanDistanceClassifier(BaseEstimator, ClassifierMixin):
@@ -149,7 +156,6 @@ class EuclideanDistanceClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(self):
         self.X_mean_ = None
-
 
     def fit(self, X, y):
         """
@@ -164,8 +170,7 @@ class EuclideanDistanceClassifier(BaseEstimator, ClassifierMixin):
         fit always returns self.
         """
         raise NotImplementedError
-        #return self
-
+        # return self
 
     def predict(self, X):
         """
@@ -195,7 +200,7 @@ def evaluate_classifier(clf, X, y, folds=5):
     """
     raise NotImplementedError
 
-    
+
 def calculate_priors(X, y):
     """Return the a-priori probabilities for every class
 
@@ -209,13 +214,11 @@ def calculate_priors(X, y):
     raise NotImplementedError
 
 
-
 class CustomNBClassifier(BaseEstimator, ClassifierMixin):
     """Custom implementation Naive Bayes classifier"""
 
     def __init__(self, use_unit_variance=False):
         self.use_unit_variance = use_unit_variance
-
 
     def fit(self, X, y):
         """
@@ -230,8 +233,7 @@ class CustomNBClassifier(BaseEstimator, ClassifierMixin):
         fit always returns self.
         """
         raise NotImplementedError
-        #return self
-
+        # return self
 
     def predict(self, X):
         """
@@ -273,12 +275,13 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
         # Return accuracy score.
         raise NotImplementedError
 
-        
+
 def evaluate_linear_svm_classifier(X, y, folds=5):
     """ Create an svm with linear kernel and evaluate it using cross-validation
     Calls evaluate_classifier
     """
     raise NotImplementedError
+
 
 def evaluate_rbf_svm_classifier(X, y, folds=5):
     """ Create an svm with rbf kernel and evaluate it using cross-validation
@@ -292,43 +295,42 @@ def evaluate_knn_classifier(X, y, folds=5):
     Calls evaluate_classifier
     """
     raise NotImplementedError
-    
+
 
 def evaluate_sklearn_nb_classifier(X, y, folds=5):
     """ Create an sklearn naive bayes classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
     raise NotImplementedError
-    
-    
+
+
 def evaluate_custom_nb_classifier(X, y, folds=5):
     """ Create a custom naive bayes classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
     raise NotImplementedError
-    
-    
+
+
 def evaluate_euclidean_classifier(X, y, folds=5):
     """ Create a euclidean classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
     raise NotImplementedError
-    
+
+
 def evaluate_nn_classifier(X, y, folds=5):
     """ Create a pytorch nn classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError    
+    raise NotImplementedError
 
-    
 
 def evaluate_voting_classifier(X, y, folds=5):
     """ Create a voting ensemble classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
     raise NotImplementedError
-    
-    
+
 
 def evaluate_bagging_classifier(X, y, folds=5):
     """ Create a bagging ensemble classifier and evaluate it using cross-validation
