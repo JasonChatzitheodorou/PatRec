@@ -1,4 +1,5 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
+import sklearn, sklearn.metrics
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -54,8 +55,7 @@ def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
     '''
 
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
-    pixelOfSamples = [X[sample].reshape(
-        (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
+    pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
     return statistics.fmean(pixelOfSamples)
 
 
@@ -169,22 +169,23 @@ class EuclideanDistanceClassifier(BaseEstimator, ClassifierMixin):
 
         fit always returns self.
         """
-        raise NotImplementedError
-        # return self
+        means = [digit_mean(X, y, digit) for digit in range(10)]
+        self.X_mean_ = np.array(means)
+        return self
 
     def predict(self, X):
         """
         Make predictions for X based on the
         euclidean distance from self.X_mean_
         """
-        raise NotImplementedError
+        return euclidean_distance_classifier(X, self.X_mean_)
 
     def score(self, X, y):
         """
         Return accuracy score on the predictions
         for X based on ground truth y
         """
-        raise NotImplementedError
+        return sklearn.metrics.accuracy_score(y, self.predict(X))
 
 
 def evaluate_classifier(clf, X, y, folds=5):
@@ -198,7 +199,30 @@ def evaluate_classifier(clf, X, y, folds=5):
     Returns:
         (float): The 5-fold classification score (accuracy)
     """
-    raise NotImplementedError
+    # List that holds scores
+    scores = []
+
+    # Split the arrays in 5 equal parts
+    X_folds = np.array_split(X, folds, axis=0)
+    y_folds = np.array_split(y, folds, axis= 0)
+
+    for fold in range(folds): 
+        # Select data for testing by choosing the correct fold
+        X_test = X_folds[fold]
+        y_test = y_folds[fold]
+
+        # Select data for training by concatenating the rest of the folds
+        X_train = np.concatenate([x for idx, x in enumerate(X_folds) if idx != fold])
+        y_train = np.concatenate([x for idx, x in enumerate(y_folds) if idx != fold])
+
+        # Train the estimator
+        clf.fit(X_train, y_train)
+
+        # Get a score for current fold and append it
+        scores.append(clf.score(X_test, y_test))
+
+    # Return the mean of the errors
+    return statistics.fmean(scores)
 
 
 def calculate_priors(X, y):
@@ -315,7 +339,8 @@ def evaluate_euclidean_classifier(X, y, folds=5):
     """ Create a euclidean classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    euclClassifier = EuclideanDistanceClassifier()
+    return evaluate_classifier(euclClassifier, X, y, folds)
 
 
 def evaluate_nn_classifier(X, y, folds=5):
