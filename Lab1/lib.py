@@ -76,6 +76,10 @@ def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
         (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
     return statistics.variance(pixelOfSamples)
 
+def digit_mean_at_component(X, y, digit, component):
+    samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
+    componentlOfSamples = [X[sample][component] for sample in samplesOfClass]
+    return statistics.fmean(componentlOfSamples)
 
 def digit_mean(X, y, digit):
     '''Calculates the mean for all instances of a specific digit
@@ -89,11 +93,13 @@ def digit_mean(X, y, digit):
         (np.ndarray): The mean value of the digits for every pixel
     '''
 
-    means = []
-    for i in range(16):
-        for j in range(16):
-            currentPixel = (i, j)
-            means.append(digit_mean_at_pixel(X, y, digit, currentPixel))
+    vectorSize = X.shape[1]
+    means = [digit_mean_at_component(X, y, digit, i) for i in range(vectorSize)]
+    
+    #for i in range(16):
+    #    for j in range(16):
+    #        currentPixel = (i, j)
+    #        means.append(digit_mean_at_pixel(X, y, digit, currentPixel))
 
     return np.array(means)
 
