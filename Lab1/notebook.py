@@ -176,11 +176,17 @@ print("The 5-fold accuracy score of the classifier is {}".format(score))
 
 # %%
 from sklearn.decomposition import PCA
+from mlxtend.plotting import plot_decision_regions
 
 pca = PCA(n_components=2)
 X_pca = pca.fit_transform(X)
-plt.scatter(X_pca[:, 0], X_pca[:, 1], c=y, edgecolor='none', alpha=0.5)
-plt.colorbar()
+eucl_clf_pca = lib.EuclideanDistanceClassifier()
+eucl_clf_pca.fit(X_pca, y)
+
+scatter_kwargs = {'s': 40, 'edgecolor': 'k', 'alpha': 0.7}
+plot_decision_regions(X_pca, y, clf=eucl_clf_pca, 
+                      markers="o",
+                      scatter_kwargs=scatter_kwargs)
 plt.show()
 
 
