@@ -3,7 +3,6 @@ import sklearn, sklearn.metrics
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import statistics
 
 
 def show_sample(X, index):
@@ -56,7 +55,7 @@ def digit_mean_at_pixel(X, y, digit, pixel=(10, 10)):
 
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
     pixelOfSamples = [X[sample].reshape((16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
-    return statistics.fmean(pixelOfSamples)
+    return np.mean(pixelOfSamples)
 
 
 def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
@@ -74,12 +73,12 @@ def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
     pixelOfSamples = [X[sample].reshape(
         (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
-    return statistics.variance(pixelOfSamples)
+    return np.var(pixelOfSamples)
 
 def digit_mean_at_component(X, y, digit, component):
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
     componentlOfSamples = [X[sample][component] for sample in samplesOfClass]
-    return statistics.fmean(componentlOfSamples)
+    return np.mean(componentlOfSamples)
 
 def digit_mean(X, y, digit):
     '''Calculates the mean for all instances of a specific digit
@@ -228,7 +227,7 @@ def evaluate_classifier(clf, X, y, folds=5):
         scores.append(clf.score(X_test, y_test))
 
     # Return the mean of the errors
-    return statistics.fmean(scores)
+    return np.mean(scores)
 
 
 def calculate_priors(X, y):
@@ -241,36 +240,91 @@ def calculate_priors(X, y):
     Returns:
         (np.ndarray): (n_classes) Prior probabilities for every class
     """
-    raise NotImplementedError
+    priors = []
+    totalSamples = X.shape[0]
+    samplesOfClass = dict((i, []) for i in range(10))
+    
+    # Fill dictionary of classes to list of samples
+    for idx, x in enumerate(X):
+        sampleClass = y[idx]
+        samplesOfClass[sampleClass].append(x) 
+    
+    # Calculate priors by dividing with total samples
+    for i in samplesOfClass:
+        sizeOfClass = len(samplesOfClass[i])
+        priors.append(sizeOfClass / totalSamples)
 
+    return np.array(priors)
+
+def gaussian_distribution(x, var, mean):
+    return (1 / np.sqrt(var * 2 * np.pi)) * np.exp(-1/2 * (x - mean)**2 / var)
 
 class CustomNBClassifier(BaseEstimator, ClassifierMixin):
     """Custom implementation Naive Bayes classifier"""
 
     def __init__(self, use_unit_variance=False):
         self.use_unit_variance = use_unit_variance
+        self.priors = np.zeros(10)
+        self.means = None
+        self.variance = None
 
     def fit(self, X, y):
         """
-        This should fit classifier. All the "work" should be done here.
+        Calculate priors for Naive Bayes by dividing 
+        number of samples of one class with total samples.
 
-        Calculates self.X_mean_ based on the mean
-        feature values in X for each class.
-
-        self.X_mean_ becomes a numpy.ndarray of shape
-        (n_classes, n_features)
+        Also calculates mean and variance for the characteristics
+        of the date given.
 
         fit always returns self.
         """
-        raise NotImplementedError
-        # return self
+        
+        totalSamples = X.shape[0]
+        samplesOfClass = dict((i, []) for i in range(10))
+
+        # Fill dictionary of classes to list of samples
+        for idx, x in enumerate(X):
+            sampleClass = y[idx]
+            samplesOfClass[sampleClass].append(x) 
+
+        # Calculate priors by dividing with total samples
+
+        for i in samplesOfClass:
+            sizeOfClass = len(samplesOfClass[i])
+            self.priors[i] = sizeOfClass / totalSamples
+        
+        # Calculate mean and variance 
+        # NOTE: Performance of calculation of mean and variance can 
+        # be improved by using the dictionary
+        self.means = np.zeros((10, X.shape[1]))
+        self.variance = np.zeros((10, X.shape[1]))
+        for i in range(10):
+            self.means[i] = digit_mean(X, y, i)
+            self.variance[i] = digit_variance(X, y, i)
+
+        return self
 
     def predict(self, X):
         """
-        Make predictions for X based on the
-        euclidean distance from self.X_mean_
+        Make predictions assuming Gaussian distribution
+        of the characteristics
         """
-        raise NotImplementedError
+        predictions = []
+        for sample in X:
+            # Calculate the a-posteriori probabilities of each class
+            posteriori = []
+            for digit in range(10):
+                # Initialize the multiplication temp with the prior
+                mul_temp = self.priors[digit] 
+                for idx, x in enumerate(sample):
+                    mul_temp = mul_temp * gaussian_distribution(x, self.variance[digit][idx], self.means[digit][idx])
+                posteriori.append(mul_temp)
+            
+            # Choose the class that is most probable
+            predictions.append(np.argmin(np.array(posteriori)))
+        
+        return np.array(predictions)
+
 
     def score(self, X, y):
         """
