@@ -3,6 +3,9 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.svm import SVC 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.ensemble import BaggingClassifier
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -262,11 +265,8 @@ def log_gaussian_distribution(x, var, mean):
     If the variance of the characteristic is 0
     it is treated as if it were 1
     """
-    ans = 0
-    if(var == 0): # Assume variance is 1
-        ans = (-0.5 * (x - mean)**2) - 0.5 * np.log(2 * np.pi)
-    else:
-        ans = (-0.5 * (x - mean)**2 / var) - 0.5 * np.log(var * 2 * np.pi)
+    var_smoothed = var + 1e-09
+    ans = (-0.5 * (x - mean)**2 / var_smoothed) - 0.5 * np.log(var_smoothed * 2 * np.pi)
     
     return ans 
 
@@ -441,15 +441,53 @@ def evaluate_nn_classifier(X, y, folds=5):
     raise NotImplementedError
 
 
-def evaluate_voting_classifier(X, y, folds=5):
+def evaluate_voting_classifier(X, y, voting_method='hard', folds=5):
     """ Create a voting ensemble classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    linear_svm = SVC(kernel='linear')
+    rbf_svm = SVC(kernel='rbf')
+    k_neighbors = KNeighborsClassifier()
 
-
-def evaluate_bagging_classifier(X, y, folds=5):
+    weights = None
+    if voting_method == 'soft':
+        weights = [1, 2, 1]
+    
+    v_clf = VotingClassifier(
+        estimators=
+        [
+            ('linear_svm', linear_svm),
+            ('rbf_svm', rbf_svm),
+            ('k_neighbors', k_neighbors)
+        ], 
+        voting=voting_method, 
+        weights=weights)
+    
+    return evaluate_classifier(v_clf, X, y, folds)
+                
+def evaluate_bagging_classifier(X, y, clf=GaussianNB(var_smoothing=0.1), folds=5):
     """ Create a bagging ensemble classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    bag_clf = BaggingClassifier(base_estimator=clf, random_state=0)
+    bag_clf.fit(X, y)
+    return evaluate_classifier(bag_clf, X, y, folds)
+    
+
+
+def classifier_mistakes_per_class(clf, X_train, y_train, X_test, y_test):
+    """Takes a classifier and counts its mistakes per class"""
+    clf.fit(X_train, y_train)
+    
+    predictions = clf.predict(X_test)
+
+    mistakesOfClass = np.zeros(10, dtype=int)
+    for idx, correct in enumerate(y_test):
+        if(correct != predictions[idx]):
+            mistakesOfClass[correct] += 1
+
+    return mistakesOfClass
+
+
+
+
