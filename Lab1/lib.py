@@ -241,23 +241,37 @@ def calculate_priors(X, y):
         (np.ndarray): (n_classes) Prior probabilities for every class
     """
     priors = []
-    totalSamples = X.shape[0]
-    samplesOfClass = dict((i, []) for i in range(10))
+    totalSamples = y.size
+    samplesOfClass = np.zeros(10)
     
-    # Fill dictionary of classes to list of samples
-    for idx, x in enumerate(X):
-        sampleClass = y[idx]
-        samplesOfClass[sampleClass].append(x) 
+    for sampleClass in y:
+        samplesOfClass[sampleClass] += 1 
     
     # Calculate priors by dividing with total samples
-    for i in samplesOfClass:
-        sizeOfClass = len(samplesOfClass[i])
-        priors.append(sizeOfClass / totalSamples)
+    for s in samplesOfClass:
+        priors.append(s / totalSamples)
 
     return np.array(priors)
 
-def gaussian_distribution(x, var, mean):
-    return (1 / np.sqrt(var * 2 * np.pi)) * np.exp(-1/2 * (x - mean)**2 / var)
+def log_gaussian_distribution(x, var, mean):
+    """
+    If the variance of the characteristic is 0
+    it is treated as if it were 1
+    """
+    ans = 0
+    if(var == 0): # Assume variance is 1
+        ans = (-0.5 * (x - mean)**2) - 0.5 * np.log(2 * np.pi)
+    else:
+        ans = (-0.5 * (x - mean)**2 / var) - 0.5 * np.log(var * 2 * np.pi)
+    
+    return ans 
+
+def posteriori_sum(prior, sample, var, mean):
+    ans = np.log(prior)
+    for idx, x in enumerate(sample):
+        ans += log_gaussian_distribution(x, var[idx], mean[idx])
+    return ans
+
 
 class CustomNBClassifier(BaseEstimator, ClassifierMixin):
     """Custom implementation Naive Bayes classifier"""
@@ -297,10 +311,19 @@ class CustomNBClassifier(BaseEstimator, ClassifierMixin):
         # NOTE: Performance of calculation of mean and variance can 
         # be improved by using the dictionary
         self.means = np.zeros((10, X.shape[1]))
-        self.variance = np.zeros((10, X.shape[1]))
         for i in range(10):
-            self.means[i] = digit_mean(X, y, i)
-            self.variance[i] = digit_variance(X, y, i)
+            m = digit_mean(X, y, i)
+            for j in range(m.shape[0]):
+                self.means[i][j] = m[j]
+        
+        if self.use_unit_variance == True:
+            self.variance = np.ones((10, X.shape[1]))
+        else:
+            self.variance = np.zeros((10, X.shape[1]))
+            for i in range(10):
+                v = digit_variance(X, y, i)
+                for j in range(v.shape[0]):
+                    self.variance[i][j] = v[j]
 
         return self
 
@@ -309,21 +332,21 @@ class CustomNBClassifier(BaseEstimator, ClassifierMixin):
         Make predictions assuming Gaussian distribution
         of the characteristics
         """
-        predictions = []
-        for sample in X:
+        predictions = np.zeros(X.shape[0], dtype=int)
+        posteriori = np.zeros(10)
+        for idx, sample in enumerate(X):
             # Calculate the a-posteriori probabilities of each class
-            posteriori = []
+            # by summing the logarithm of the probabilities
             for digit in range(10):
-                # Initialize the multiplication temp with the prior
-                mul_temp = self.priors[digit] 
-                for idx, x in enumerate(sample):
-                    mul_temp = mul_temp * gaussian_distribution(x, self.variance[digit][idx], self.means[digit][idx])
-                posteriori.append(mul_temp)
+                curr_prior = self.priors[digit]
+                curr_var = self.variance[digit]
+                curr_mean = self.means[digit]
+                posteriori[digit] = posteriori_sum(curr_prior, sample, curr_var, curr_mean)
             
             # Choose the class that is most probable
-            predictions.append(np.argmin(np.array(posteriori)))
+            predictions[idx] = np.argmax(np.array(posteriori))
         
-        return np.array(predictions)
+        return predictions
 
 
     def score(self, X, y):
