@@ -1,5 +1,9 @@
-from sklearn.base import BaseEstimator, ClassifierMixin
 import sklearn, sklearn.metrics
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.svm import SVC 
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random
@@ -387,28 +391,32 @@ def evaluate_linear_svm_classifier(X, y, folds=5):
     """ Create an svm with linear kernel and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    clf = SVC(kernel='linear')
+    return evaluate_classifier(clf, X, y, folds)
 
 
 def evaluate_rbf_svm_classifier(X, y, folds=5):
     """ Create an svm with rbf kernel and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    clf = SVC(kernel='rbf')
+    return evaluate_classifier(clf, X, y, folds)
 
 
 def evaluate_knn_classifier(X, y, folds=5):
     """ Create a knn and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    clf = KNeighborsClassifier()
+    return evaluate_classifier(clf, X, y, folds)
 
 
 def evaluate_sklearn_nb_classifier(X, y, folds=5):
     """ Create an sklearn naive bayes classifier and evaluate it using cross-validation
     Calls evaluate_classifier
     """
-    raise NotImplementedError
+    clf = GaussianNB(var_smoothing=0.1)
+    return evaluate_classifier(clf, X, y, folds)
 
 
 def evaluate_custom_nb_classifier(X, y, folds=5):
