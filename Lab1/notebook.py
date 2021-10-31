@@ -10,8 +10,6 @@ from IPython import get_ipython
 # * Κουνούδης Δημήτρης
 # %% [markdown]
 # ## Εργαστήριο 1
-# %% [markdown]
-# ### Προπαρασκευή
 
 # %%
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -31,6 +29,8 @@ import importlib
 # Useful for reloading lib.py when it is changed
 importlib.reload(lib)
 
+# %% [markdown]
+# ### Προπαρασκευή
 # %% [markdown]
 # #### Βήμα 1
 
@@ -82,9 +82,6 @@ lib.digit_variance_at_pixel(X_train, y_train, 0, (10, 10))
 # %%
 zero_mean = lib.digit_mean(X_train, y_train, 0)
 zero_variance = lib.digit_variance(X_train, y_train, 0)
-
-#print(list(zero_mean))
-#print(list(zero_variance))
 
 # %% [markdown]
 # #### Βήμα 7
@@ -162,12 +159,8 @@ print("The accuracy is {}".format(sklearn.metrics.accuracy_score(y_test, predict
 # #### Βήμα 13
 
 # %%
-# Concatenate all data in order to split them into folds
-X = np.concatenate((X_train, X_test))
-y = np.concatenate((y_train, y_test))
-
 # Evaluate classifier
-score = lib.evaluate_euclidean_classifier(X, y, folds=5)
+score = lib.evaluate_euclidean_classifier(X_train, y_train, folds=5)
 
 
 # %%
@@ -179,12 +172,12 @@ from sklearn.decomposition import PCA
 from mlxtend.plotting import plot_decision_regions
 
 pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X)
+X_pca = pca.fit_transform(X_train)
 eucl_clf_pca = lib.EuclideanDistanceClassifier()
-eucl_clf_pca.fit(X_pca, y)
+eucl_clf_pca.fit(X_pca, y_train)
 
 scatter_kwargs = {'s': 40, 'edgecolor': 'k', 'alpha': 0.7}
-plot_decision_regions(X_pca, y, clf=eucl_clf_pca, 
+plot_decision_regions(X_pca, y_train, clf=eucl_clf_pca, 
                       markers="o",
                       scatter_kwargs=scatter_kwargs)
 plt.show()
@@ -193,7 +186,7 @@ plt.show()
 # %%
 # In order to plot learning curve use sklearn.learning_curve 
 train_sizes, train_scores, test_scores = sklearn.model_selection.learning_curve(
-    lib.EuclideanDistanceClassifier(), X, y, cv=5, n_jobs=-1, 
+    lib.EuclideanDistanceClassifier(), X_train, y_train, cv=5, n_jobs=-1, 
     train_sizes=np.linspace(.1, 1.0, 5))
 
 
@@ -232,4 +225,114 @@ plt.show()
 
 # %% [markdown]
 # ### Εργαστηριακό μέρος
+# %% [markdown]
+# #### Βήμα 14
+
+# %%
+priors = lib.calculate_priors(X_train, y_train)
+
+for idx, x in enumerate(priors):
+    print("The a-priori probability of class {} is {:.5f}".format(idx, x))
+
+# %% [markdown]
+# #### Βήμα 15
+
+# %%
+importlib.reload(lib)
+NB_clf = lib.CustomNBClassifier()
+NB_clf.fit(X_train, y_train)
+
+# NOTE: Variance smoothing applied is 1e-09
+predictions = NB_clf.predict(X_test)
+print("The accuracy of the custom implementation is {}".format(sklearn.metrics.accuracy_score(y_test, predictions)))
+
+
+# %%
+from sklearn.naive_bayes import GaussianNB
+
+for smoothing in [1e-9, 1e-5, 1e-2, 0.1, 0.5, 2]:
+    sklearn_NB_clf = GaussianNB(var_smoothing=smoothing)
+    sklearn_NB_clf.fit(X_train, y_train)
+    sklearn_predictions = sklearn_NB_clf.predict(X_test)
+    print("The accuracy of the sklearn implementation for var_smoothing={} is {:.5f}".format(smoothing, sklearn.metrics.accuracy_score(y_test, sklearn_predictions)))
+
+# %% [markdown]
+# Το accuracy που έβγαλε η δικιά μας υλοποίηση ήταν πρακτικά ίδιο με τον default GaussianNB (`var_smoothing=1e-09`). Στη δικιά μας υλοποίηση προσθέταμε παντού τον ίδιο αριθμό `1e-09` για να επιτύχουμε variance smoothing. 
+# 
+# Αντίθετα η υλοποίηση του scikit learn προσθέτει ένα συγκεκριμένο ποσοστό της μεγαλύτερης απόκλισης σε όλες τις αποκλίσεις, το οποίο μπορεί να αλλάξει ο χρήστης για να βρει το βέλτιστο. Όπως φαίνεται στην συγκεκριμένη περίπτωση το `var_smoothing=0.1` έχει αρκετά καλό accuracy.
+# %% [markdown]
+# #### Βήμα 16
+
+# %%
+# All variances are 1
+NB_clf = lib.CustomNBClassifier(use_unit_variance=True)
+NB_clf.fit(X_train, y_train)
+
+predictions = NB_clf.predict(X_test)
+print("The accuracy of the custom implementation with unit variances is {}".format(sklearn.metrics.accuracy_score(y_test, predictions)))
+
+# %% [markdown]
+# #### Βήμα 17
+
+# %%
+evaluators = [  ('Linear SVM', lib.evaluate_linear_svm_classifier), 
+                ('RBF SVM', lib.evaluate_rbf_svm_classifier),
+                ('5-Nearest Neighbors', lib.evaluate_knn_classifier), 
+                ('Naive Bayes', lib.evaluate_sklearn_nb_classifier)
+             ]
+    
+for ev in evaluators:
+    print("The 5-fold cross validation accuracy of {} is {:.5f}".format(ev[0], ev[1](X_train, y_train)))
+
+# %% [markdown]
+# #### Βήμα 18
+
+# %%
+# NOTE: Check what kind of mistakes each classifier makes
+from sklearn.svm import SVC 
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+
+linear_svm = SVC(kernel='linear')
+gaussian_NB = GaussianNB(var_smoothing=0.1)
+k_neighbors = KNeighborsClassifier()
+
+print("Linear SVM mispredictions per class are {}".format(lib.classifier_mistakes_per_class(linear_svm, X_train, y_train, X_test, y_test)))
+print("Gaussian Naive Bayes mispredictions per class are {}".format(lib.classifier_mistakes_per_class(gaussian_NB, X_train, y_train, X_test, y_test)))
+print("5-Nearest Neighbor mispredictions per class are {}".format(lib.classifier_mistakes_per_class(k_neighbors, X_train, y_train, X_test, y_test)))
+
+# %% [markdown]
+# Όπως φαίνεται οι παραπάνω ταξινομητές δεν κάνουν τα ίδια λάθη, αν και υπάρχουν κάποιες ομοιότητες στην κατανομή λαθών, οπότε ο συνδυασμός τους με voting classifier μάλλον θα βελτιώσει την ακρίβεια των προβλέψεων
+
+# %%
+print("The 5-fold cross validation accuracy of the voting classifier with hard voting is {:.5f}".format(lib.evaluate_voting_classifier(X_train, y_train)))
+
+
+# %%
+print("The 5-fold cross validation accuracy of the bagging classifier using Gaussian Naive Bayes is {:.5f}".format(lib.evaluate_bagging_classifier(X_train, y_train)))
+
+# %% [markdown]
+# Η χρήση του bagging classifier δεν φαίνεται να επηρεάζει σημαντικά το accuracy του Naive Bayes παρόλο που το βελτιώνει λίγο
+# %% [markdown]
+# #### Βήμα 19
+
+# %%
+from torch.utils.data import DataLoader
+
+train_data = lib.BlobData(X_train, y_train)
+test_data = lib.BlobData(X_test, y_test)
+
+BATCH_SZ = 32
+train_dl = DataLoader(train_data, batch_size=BATCH_SZ, shuffle=True)
+test_dl = DataLoader(test_data, batch_size=BATCH_SZ, shuffle=True)
+
+
+# %%
+importlib.reload(lib)
+
+clf = lib.PytorchNNModel(X_train.shape[1], len(set(y_train)), layers=[256] * 5)
+clf.fit(X_train, y_train)
+
+clf.score(X_test, y_test)
+
 
