@@ -368,12 +368,13 @@ class CustomNBClassifier(BaseEstimator, ClassifierMixin):
 
 
 class PytorchNNModel(BaseEstimator, ClassifierMixin):
-    def __init__(self, nfeatures, nclasses, layers):
+    def __init__(self, nfeatures, nclasses, layers, learning_rate=1e-2, epochs=30):
         # WARNING: Make sure predict returns the expected (nsamples) numpy array not a torch tensor.
         # TODO: initialize model, criterion and optimizer
+        self.epochs = epochs
         self.model = MyFunnyNet(layers, nfeatures, nclasses)
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-2)
+        self.criterion = nn.NLLLoss()
+        self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate)
 
     def fit(self, X, y):
         # TODO: split X, y in train and validation set and wrap in pytorch dataloaders
@@ -383,20 +384,30 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
         train_loader = DataLoader(train_data, batch_size=BATCH_SZ, shuffle=True)
        
         # TODO: Train model
-        EPOCHS = 10
         #self.model.float()
         self.model.train() # gradients "on"
-        for epoch in range(EPOCHS): # loop through dataset
+        for epoch in range(self.epochs): # loop through dataset
             running_average_loss = 0
             for i, data in enumerate(train_loader): # loop thorugh batches
                 X_batch, y_batch = data # get the features and labels
-                #print(X_batch); break
                 self.optimizer.zero_grad() # ALWAYS USE THIS!! 
                 out = self.model(X_batch.float()) # forward pass
-                loss = self.criterion(out, y_batch.long()) # compute per batch loss 
+                loss = self.criterion(out, y_batch) # compute per batch loss 
                 loss.backward() # compurte gradients based on the loss function
                 self.optimizer.step() # update weights 
-        
+
+                #print(list(self.model.parameters())[0].grad)
+                #break
+
+                #out_np = out.detach().numpy()
+                #y_batch_np = y_batch.detach().numpy()
+                #print(out_np[0])
+                #print(y_batch_np[0])
+                #break
+                #accuracy = sklearn.metrics.accuracy_score(y_batch_np, out_np)
+                #running_average_loss += loss.detach().item()
+                #if i % 100 == 0:
+                #    print("Epoch: {} \t Batch: {} \t Loss {}".format(epoch, i, running_average_loss/(i+1)))
         return self
 
     def predict(self, X):
@@ -412,7 +423,7 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
                 X_batch = data # test data and labels
                 out = self.model(X_batch.float()) # get net's predictions
                 val, y_pred = out.max(1) # argmax since output is a prob distribution
-                predictions = [*predictions, *y_pred.tolist()]
+                predictions = [*predictions, *(y_pred.tolist())]
 
         #print(predictions)
         return np.array(predictions, dtype=int)
@@ -421,6 +432,42 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
         # Return accuracy score.
         return sklearn.metrics.accuracy_score(y, self.predict(X))
 
+    def get_weights(self):
+        ans = []
+        for name, W in self.model.named_parameters():
+            if 'weight' in name:
+                ans.append(W.tolist())
+        
+        return ans
+
+from matplotlib.lines import Line2D   
+def plot_grad_flow(named_parameters):
+    '''Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+    
+    Usage: Plug this function in Trainer class after loss.backwards() as 
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
+    ave_grads = []
+    max_grads= []
+    layers = []
+    for n, p in named_parameters:
+        if(p.requires_grad) and ("bias" not in n):
+            layers.append(n)
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
+    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
+    plt.xlim(left=0, right=len(ave_grads))
+    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
+    plt.xlabel("Layers")
+    plt.ylabel("average gradient")
+    plt.title("Gradient flow")
+    plt.grid(True)
+    plt.legend([Line2D([0], [0], color="c", lw=4),
+                Line2D([0], [0], color="b", lw=4),
+                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
 
 class BlobData(Dataset):
     def __init__(self, X, y, trans=None):
@@ -440,51 +487,35 @@ class BlobData(Dataset):
             return self.data[idx]
 
 
-class LinearWActivation(nn.Module): 
-  def __init__(self, in_features, out_features, activation='sigmoid'):
-      super(LinearWActivation, self).__init__()
-      # nn.Linear is just a matrix of [in_features, out_features] randomly initialized
-      self.f = nn.Linear(in_features, out_features)
-      if activation == 'sigmoid':
-          self.a = nn.Sigmoid()
-      else:
-          self.a = nn.ReLU()
-      
-      # this would also do the job
-      # self.t = nn.Sequenntial(self.f, self. a)
-          
-  # the forward pass of info through the net
-  def forward(self, x): 
-      return self.a(self.f(x))
-
-
 class MyFunnyNet(nn.Module): 
     def __init__(self, layers, n_features, n_classes, activation='sigmoid'):
-      '''
-      Args:
-        layers (list): a list of the number of consecutive layers
-        n_features (int):  the number of input features
-        n_classes (int): the number of output classes
-        activation (str): type of non-linearity to be used
-      '''
-      super(MyFunnyNet, self).__init__()
-      layers_in = [n_features] + layers # list concatenation
-      layers_out = layers + [n_classes]
-      # loop through layers_in and layers_out lists
-      self.f = nn.Sequential(*[
-          LinearWActivation(in_feats, out_feats, activation=activation)
-          for in_feats, out_feats in zip(layers_in, layers_out)
-      ])
-      # final classification layer is always a linear mapping
-      self.clf = nn.Linear(n_classes, n_classes)
+        '''
+            Args:
+            layers (list): a list of the number of consecutive layers
+            n_features (int):  the number of input features
+            n_classes (int): the number of output classes
+            activation (str): type of non-linearity to be used
+        '''
+        super(MyFunnyNet, self).__init__()
+        layers_in = [n_features] + layers # list concatenation
+        layers_out = layers + [n_classes]
+        
+        # loop through layers_in and layers_out lists
+        module_list = []
+        for idx in range(len(layers_in)):
+            module_list.append(nn.Linear(layers_in[idx], layers_out[idx]))
+            module_list.append(nn.ReLU())
+        
+        module_list.append(nn.Linear(n_classes, n_classes))
+        module_list.append(nn.LogSoftmax(dim=0))
+
+        self.f = nn.Sequential(*module_list)
                 
     def forward(self, x): # again the forwrad pass
-      # apply non-linear composition of layers/functions
-      y = self.f(x)
-      # return an affine transformation of y <-> classification layer
-      return self.clf(y)
+        return self.f(x)
 
 
+    
 def evaluate_NNModel_classifier(X, y, folds=5):
     clf = PytorchNNModel()
     return evaluate_classifier(clf, X, y)
