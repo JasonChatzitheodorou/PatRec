@@ -330,9 +330,22 @@ test_dl = DataLoader(test_data, batch_size=BATCH_SZ, shuffle=True)
 # %%
 importlib.reload(lib)
 
-clf = lib.PytorchNNModel(X_train.shape[1], len(set(y_train)), layers=[256] * 5)
-clf.fit(X_train, y_train)
+nn_layers = [[], [100], [100, 50], [400], [400, 100, 50]]
 
-clf.score(X_test, y_test)
+score_list = []
+for layers in nn_layers:
+    nfeat = X_train.shape[1]
+    nclass = len(set(y_train))
+    learning_r = 1e-2
+    epochs = 20
+
+    clf = lib.PytorchNNModel(nfeat, nclass, layers, learning_r, epochs)
+    clf.fit(X_train, y_train)
+    score_list.append(clf.score(X_test, y_test))
+
+
+# %%
+for idx, s in enumerate(score_list):
+    print("The accuracy with layers {} is {:.5f}".format([256, *(nn_layers[idx]), 10], s))
 
 
