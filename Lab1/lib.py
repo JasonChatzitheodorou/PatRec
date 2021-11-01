@@ -372,7 +372,7 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
         # WARNING: Make sure predict returns the expected (nsamples) numpy array not a torch tensor.
         # TODO: initialize model, criterion and optimizer
         self.epochs = epochs
-        self.model = MyFunnyNet(layers, nfeatures, nclasses)
+        self.model = Net(layers, nfeatures, nclasses)
         self.criterion = nn.NLLLoss()
         self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate)
 
@@ -396,18 +396,6 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
                 loss.backward() # compurte gradients based on the loss function
                 self.optimizer.step() # update weights 
 
-                #print(list(self.model.parameters())[0].grad)
-                #break
-
-                #out_np = out.detach().numpy()
-                #y_batch_np = y_batch.detach().numpy()
-                #print(out_np[0])
-                #print(y_batch_np[0])
-                #break
-                #accuracy = sklearn.metrics.accuracy_score(y_batch_np, out_np)
-                #running_average_loss += loss.detach().item()
-                #if i % 100 == 0:
-                #    print("Epoch: {} \t Batch: {} \t Loss {}".format(epoch, i, running_average_loss/(i+1)))
         return self
 
     def predict(self, X):
@@ -440,34 +428,7 @@ class PytorchNNModel(BaseEstimator, ClassifierMixin):
         
         return ans
 
-from matplotlib.lines import Line2D   
-def plot_grad_flow(named_parameters):
-    '''Plots the gradients flowing through different layers in the net during training.
-    Can be used for checking for possible gradient vanishing / exploding problems.
-    
-    Usage: Plug this function in Trainer class after loss.backwards() as 
-    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow'''
-    ave_grads = []
-    max_grads= []
-    layers = []
-    for n, p in named_parameters:
-        if(p.requires_grad) and ("bias" not in n):
-            layers.append(n)
-            ave_grads.append(p.grad.abs().mean())
-            max_grads.append(p.grad.abs().max())
-    plt.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
-    plt.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
-    plt.hlines(0, 0, len(ave_grads)+1, lw=2, color="k" )
-    plt.xticks(range(0,len(ave_grads), 1), layers, rotation="vertical")
-    plt.xlim(left=0, right=len(ave_grads))
-    plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
-    plt.xlabel("Layers")
-    plt.ylabel("average gradient")
-    plt.title("Gradient flow")
-    plt.grid(True)
-    plt.legend([Line2D([0], [0], color="c", lw=4),
-                Line2D([0], [0], color="b", lw=4),
-                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+
 
 class BlobData(Dataset):
     def __init__(self, X, y, trans=None):
@@ -487,7 +448,7 @@ class BlobData(Dataset):
             return self.data[idx]
 
 
-class MyFunnyNet(nn.Module): 
+class Net(nn.Module): 
     def __init__(self, layers, n_features, n_classes, activation='sigmoid'):
         '''
             Args:
@@ -496,7 +457,7 @@ class MyFunnyNet(nn.Module):
             n_classes (int): the number of output classes
             activation (str): type of non-linearity to be used
         '''
-        super(MyFunnyNet, self).__init__()
+        super(Net, self).__init__()
         layers_in = [n_features] + layers # list concatenation
         layers_out = layers + [n_classes]
         
