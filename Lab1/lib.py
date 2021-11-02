@@ -89,10 +89,12 @@ def digit_variance_at_pixel(X, y, digit, pixel=(10, 10)):
         (16, 16))[pixel[0]][pixel[1]] for sample in samplesOfClass]
     return np.var(pixelOfSamples)
 
+
 def digit_mean_at_component(X, y, digit, component):
     samplesOfClass = [idx for idx, row in enumerate(X) if y[idx] == digit]
     componentlOfSamples = [X[sample][component] for sample in samplesOfClass]
     return np.mean(componentlOfSamples)
+
 
 def digit_mean(X, y, digit):
     '''Calculates the mean for all instances of a specific digit
