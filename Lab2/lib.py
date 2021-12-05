@@ -20,3 +20,18 @@ def data_parser(directory):
         speakers.append(l[1])
         digits.append(l[0])
     return wavs, speakers, digits
+
+# hop_length might be (window - hop_samples) for some reason 
+def calc_mfcc(wav, hop_samples, window_samples, n_mfcc=13, fs=16000):
+    kwargs = {'n_mfcc': n_mfcc, 'hop_length': hop_samples, 'n_fft': window_samples}
+    return librosa.feature.mfcc(y=wav, sr=fs, **kwargs)
+
+
+def choose_index(chosen_digit, chosen_speaker, digits, speakers):
+    for idx, z in enumerate(zip(digits, speakers)):
+        digit = z[0]
+        speaker = z[1]
+        if digit == chosen_digit and speaker == chosen_speaker:
+            return idx
+
+
