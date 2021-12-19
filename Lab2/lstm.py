@@ -39,11 +39,6 @@ class FrameLevelDataset(Dataset):
     def __len__(self):
         return len(self.feats)
 
-class extractfirst(nn.Module):
-    def forward(self,x):
-        out , _ = x
-        return out
-
 class BasicLSTM(nn.Module):
     def __init__(self, input_dim, rnn_size, output_dim, num_layers, bidirectional=False, dropout=0):
         super(BasicLSTM, self).__init__()
