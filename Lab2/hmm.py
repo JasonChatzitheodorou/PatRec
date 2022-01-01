@@ -2,7 +2,7 @@ import numpy as np
 from pomegranate import *
 
 
-X = [] # data from a single digit (can be a numpy array)
+X = np.array([]) # data from a single digit (can be a numpy array)
 
 n_states = 2 # the number of HMM states
 n_mixtures = 2 # the number of Gaussians
